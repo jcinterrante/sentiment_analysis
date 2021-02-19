@@ -4,6 +4,7 @@ library(SnowballC)
 library(udpipe)
 library(fmsb)
 
+
 data <- read_file("december_2020_bis.txt")
 text_df <- tibble(text = data)
 
@@ -56,7 +57,7 @@ for(s in c("nrc", "afinn", "bing")){
 ggplot(data = filter(bis_udp_no_stop_words, !is.na(bing)))+
   geom_histogram(aes(bing), stat = "count") +
   scale_x_discrete(guide = guide_axis(angle = 45)) +
-  labs(title = "BIS Sentiment (NRC)")
+  labs(title = "BIS Sentiment (Bing)")
 
 ggplot(data = filter(bis_udp_no_stop_words, !is.na(nrc)))+
   geom_histogram(aes(nrc), stat = "count") +
@@ -69,7 +70,6 @@ summary <- bis_udp_no_stop_words %>%
   summarize(count = sum(n, na.rm = TRUE))%>%
   filter(!is.na(nrc))%>%
   pivot_wider(names_from = "nrc", values_from = count)
-
+# https://www.r-graph-gallery.com/142-basic-radar-chart.html
 data <- rbind(rep(250,10) , rep(0,10) , summary)
 radarchart(data)
-           
