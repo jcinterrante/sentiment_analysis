@@ -51,7 +51,7 @@ summarize_bing <- function(df) {
     group_by(doc_date, doc_id, lemma, term_id, bing) %>%
     summarize()
 
-  for (i in levels(factor(bing_summary$doc_date))){
+  for (i in levels(factor(bing_summary$doc_date))) {
     print(i)
 
     subset <- bing_summary %>%
@@ -66,27 +66,24 @@ summarize_bing <- function(df) {
 
 analyze_sentiments <- function(text, exclude) {
   bis_udp <- udpipe(text$text, "english")
-  
-  doc_dates<-text%>%        
-      mutate(doc_date = ymd(
-          paste0("20", str_extract(url, "\\d{2}(?=\\d)"), "-",
-                 str_extract(url, "\\d{2}(?!\\d)"),", 1")
+
+  doc_dates <- text %>%
+    mutate(
+      doc_date = ymd(
+        paste0(
+          "20", str_extract(url, "\\d{2}(?=\\d)"), "-",
+          str_extract(url, "\\d{2}(?!\\d)"), ", 1"
+        )
       ),
       doc_id = paste0("doc", row_number())
-      )
-  
+    )
+
   bis_udp_output <- bis_udp %>%
-      filter(!upos %in% c("PART", "PUNCT", "CCONJ", "SYM", "NUM", "ADP", "AUX", "DET", "PRON", "X", "SCONJ")) %>%
-      mutate_if(is.character, str_to_lower) %>%
-      left_join(dplyr::select(doc_dates, doc_id, doc_date), by="doc_id")%>%
-      dplyr::select(doc_id, doc_date, term_id, token, lemma, upos) %>%
-      mutate(doc_id = factor(doc_id))
-  
-  #bis_udp_output <- bis_udp %>%
-   # dplyr::select(doc_id, term_id, token, lemma, upos) %>%
-    #filter(!upos %in% c("PART", "PUNCT", "CCONJ", "SYM", "NUM", "ADP", "AUX", "DET", "PRON", "X", "SCONJ")) %>%
-    #mutate_if(is.character, str_to_lower) %>%
-    #mutate(doc_id = factor(doc_id))
+    filter(!upos %in% c("PART", "PUNCT", "CCONJ", "SYM", "NUM", "ADP", "AUX", "DET", "PRON", "X", "SCONJ")) %>%
+    mutate_if(is.character, str_to_lower) %>%
+    left_join(dplyr::select(doc_dates, doc_id, doc_date), by = "doc_id") %>%
+    dplyr::select(doc_id, doc_date, term_id, token, lemma, upos) %>%
+    mutate(doc_id = factor(doc_id))
 
   bis_udp_no_stop_words <- bis_udp_output %>%
     anti_join(stop_words, by = c("lemma" = "word")) %>%
@@ -101,23 +98,23 @@ analyze_sentiments <- function(text, exclude) {
 }
 
 generate_summary_plot <- function(data) {
-    ggplot(data, aes(x = factor(quarter(doc_date, with_year = TRUE)))) +
-        labs(
-            title = "Overall Positivity of Report (Bing)", subtitle = "Bar Indicates Average Sentiment",
-            x = "Document", y = "Postivity (1 = Positive, -1 = Negative)", fill = ""
-        ) +
-        geom_violin(aes(y = bing, fill = factor(quarter(doc_date, with_year = TRUE)))) +
-        stat_summary(aes(y = bing), color = "chocolate2", fun = "mean", geom = "crossbar", size = 2) +
-        scale_fill_brewer(palette = "Dark2") + 
-        theme(legend.position = "none")
+  ggplot(data, aes(x = factor(quarter(doc_date, with_year = TRUE)))) +
+    labs(
+      title = "Overall Positivity of Report (Bing)", subtitle = "Bar Indicates Average Sentiment",
+      x = "Document", y = "Postivity (1 = Positive, -1 = Negative)", fill = ""
+    ) +
+    geom_violin(aes(y = bing, fill = factor(quarter(doc_date, with_year = TRUE)))) +
+    stat_summary(aes(y = bing), color = "chocolate2", fun = "mean", geom = "crossbar", size = 2) +
+    scale_fill_brewer(palette = "Dark2") +
+    theme(legend.position = "none")
   ggsave("question_2_barplot.png")
 }
 
 generate_radar_plot <- function(df) {
   nrc_names <- df$doc_date
   nrc_summary <- rbind(rep(.4, 10), rep(0, 10), dplyr::select(df, -doc_date))
-  
-  png(file="question_2_radar_plot.png", width = 800, height = 800)
+
+  png(file = "question_2_radar_plot.png", width = 800, height = 800)
   radarchart(nrc_summary,
     plwd = 2,
     axislabcol = "gray",
