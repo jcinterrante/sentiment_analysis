@@ -149,6 +149,9 @@ bis_text <- url_df %>%
 sentiments <- analyze_sentiments(bis_text, exclude_words)
 write_csv(sentiments, "sentiments.csv")
 
+# Note: unlike in the dec 2020 document, the dec 2019 document contains 
+# nots that do negate, ie Nots that are used as participles. I recognize
+# this As a problem, but wasn't able to implement a solution in time!
 nrc_summary <- summarize_nrc(sentiments)
 
 bing_summary <- summarize_bing(sentiments)
