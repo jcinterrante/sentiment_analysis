@@ -17,11 +17,11 @@ bis_udp$stem <- wordStem(bis_udp$token, language = "porter")
 # limits the potential decline." The "not" shouldn't negate
 # the sentiment of the phrase.
 
-#not_list <- bis_udp %>%
- # cbind_dependencies(type = "parent_rowid", recursive = TRUE)%>%
-  #filter(str_to_lower(token) == "not")
+not_list <- bis_udp %>%
+  cbind_dependencies(type = "parent_rowid", recursive = TRUE)%>%
+  filter(str_to_lower(token) == "not")
 
-bis_udp_output <- select(bis_udp, "doc_id", "term_id", "token", "stem", "lemma", "upos") %>%
+bis_udp_output <- dplyr::select(bis_udp, "doc_id", "term_id", "token", "stem", "lemma", "upos") %>%
   filter(!upos %in% c("PART", "PUNCT", "CCONJ", "SYM", "NUM", "ADP", "AUX", "DET", "PRON", "X", "SCONJ")) %>%
   mutate_if(is.character, str_to_lower)
 
@@ -31,7 +31,7 @@ bis_udp_output <- select(bis_udp, "doc_id", "term_id", "token", "stem", "lemma",
 
 bis_udp_word_filters <- bis_udp_output %>%
   anti_join(stop_words, by = c("lemma" = "word")) %>%
-  count(lemma, sort = TRUE) %>%
+  #count(lemma, sort = TRUE) %>%
   filter(!lemma %in% c("debt", "outstanding", "asset"))
 
 for (s in c("nrc", "afinn", "bing")) {
@@ -44,21 +44,21 @@ bis_udp_word_filters <- bis_udp_word_filters %>%
   mutate(bing = if_else(bing == "positive", 1, -1))
 
 bing_summary <- bis_udp_word_filters %>%
-  group_by(lemma, n, bing) %>%
-  summarize() %>%
-  mutate(bing_score = n * bing)
+  group_by(lemma, term_id, bing) %>%
+  summarize()
 
 afinn_summary <- bis_udp_word_filters %>%
-  group_by(lemma, n, afinn) %>%
-  summarize() %>%
-  mutate(afinn_score = n * afinn)
+  group_by(lemma, term_id, afinn) %>%
+  summarize()
 
 nrc_summary <- bis_udp_word_filters %>%
   group_by(nrc) %>%
-  summarize(count = sum(n, na.rm = TRUE)) %>%
+  summarize(count = n()) %>%
   filter(!is.na(nrc)) %>%
+  mutate(count = count / sum(count)) %>%
   pivot_wider(names_from = "nrc", values_from = count) %>%
-  select(positive, joy, anticipation, disgust, anger, negative, sadness, fear, surprise, trust)
+  dplyr::select(positive, joy, anticipation, disgust, anger, negative, sadness, fear, surprise, trust) %>%
+  ungroup()
 
 # Summary Statistics
 print("NRC: Sentiment Proportions")
@@ -67,11 +67,16 @@ nrc_summary%>%pivot_longer(everything(),names_to = "sentiment")%>%
   arrange(-value)%>%
   mutate(value = percent(value))
 
-summary(select(afinn_summary, afinn_score))
-summary(select(bing_summary, bing_score))
+summary(dplyr::select(afinn_summary, afinn))
+summary(dplyr::select(bing_summary, bing))
 
 #graphs
-ggplot(filter(bing_summary, abs(bing_score) > 1)) +
+bing_graph_data <- bing_summary %>%
+  group_by(lemma)%>%
+  summarize(bing_score = sum(bing, na.rm = TRUE))%>%
+  filter(abs(bing_score) >= 2)
+
+ggplot(bing_graph_data) +
   geom_bar(aes(
     y = reorder(lemma, bing_score), x = bing_score,
     fill = factor(bing_score > 0)
