@@ -7,7 +7,6 @@ library(scales)
 getStemLanguages()
 
 data <- read_file("december_2020_bis.txt")
-text_df <- tibble(text = data)
 
 bis_udp <- udpipe(data, "english")
 bis_udp$stem <- wordStem(bis_udp$token, language = "porter")

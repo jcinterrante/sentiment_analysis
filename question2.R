@@ -24,47 +24,52 @@ request_page <- function(url, delay = 0.1) {
 }
 
 generate_summary_stats<- function(df){
-    df <- df %>%
-        mutate(bing = if_else(bing == "positive", 1, -1))
-    bing_summary <- bis_udp_word_filters %>%
-        group_by(lemma, n, bing) %>%
+    bing_summary <- df %>%
+        mutate(bing = if_else(bing == "positive", 1, -1))%>%
+        group_by(doc_id, lemma, n, bing) %>%
         summarize() %>%
         mutate(bing_score = n * bing)
     
-    afinn_summary <- bis_udp_word_filters %>%
-        group_by(lemma, n, afinn) %>%
-        summarize() %>%
-        mutate(afinn_score = n * afinn)
+    for(i in levels(bing_summary$doc_id)){
+        print(i)
+        
+        subset <- bing_summary %>%
+            ungroup()%>%
+            filter(doc_id == i)%>%
+            select(bing_score)
+        
+        print(summary(subset))
+    }
     
-    nrc_summary <- bis_udp_word_filters %>%
-        group_by(nrc) %>%
+    nrc_summary <- df %>%
+        group_by(doc_id, nrc) %>%
         summarize(count = sum(n, na.rm = TRUE)) %>%
         filter(!is.na(nrc)) %>%
         pivot_wider(names_from = "nrc", values_from = count) %>%
         select(positive, joy, anticipation, disgust, anger, negative, sadness, fear, surprise, trust)
     
     print("NRC: Sentiment Proportions")
-    nrc_summary%>%pivot_longer(everything(),names_to = "sentiment")%>%
-        mutate(value = value/sum(value)) %>%
-        arrange(-value)%>%
-        mutate(value = percent(value))
-    
-    summary(select(afinn_summary, afinn_score))
-    summary(select(bing_summary, bing_score))
+    print(nrc_summary %>%
+              pivot_longer(-doc_id,names_to = "sentiment")%>%
+              mutate(value = value/sum(value)) %>%
+              arrange(-value)%>%
+              mutate(value = percent(value))%>%
+              pivot_wider(names_from=doc_id))
 }
 
-analyze_sentiments<- function(text){
+analyze_sentiments<- function(text, exclude){
     # analyze sentiments
     bis_udp <- udpipe(text$text, "english")
     
     bis_udp_output <- select(bis_udp, "doc_id", "term_id", "token", "lemma", "upos") %>%
         filter(!upos %in% c("PART", "PUNCT", "CCONJ", "SYM", "NUM", "ADP", "AUX", "DET", "PRON", "X", "SCONJ")) %>%
-        mutate_if(is.character, str_to_lower)
+        mutate_if(is.character, str_to_lower)%>%
+        mutate(doc_id = factor(doc_id))
     
     bis_udp_no_stop_words <- bis_udp_output %>%
         anti_join(stop_words, by = c("lemma" = "word")) %>%
         count(doc_id, lemma, sort = TRUE) %>%
-        filter(!lemma %in% c("debt", "outstanding", "asset"))
+        filter(!lemma %in% exclude)
     
     for (s in c("nrc", "afinn", "bing")) {
         bis_udp_no_stop_words <- bis_udp_no_stop_words %>%
@@ -74,19 +79,7 @@ analyze_sentiments<- function(text){
     bis_udp_no_stop_words
 }
 
-#get_tokens <- function(urls) {
- # bis_text <- urls %>%
-  #  mutate(text = map(url, request_page, delay = delay))
-
-  #bis_word_tokens <- unnest_tokens(bis_text, word_tokens, text, token = "words") %>%
-   # mutate(report_date = ymd(paste0(
-    #  "20", str_extract(url, "\\d{2}(?=\\d)"), ".",
-     # str_extract(url, "\\d{2}(?!\\d)"), ".1"
-    #))) %>%
-    #select(report_date, word_tokens)
-#}
-
-generate_summary_plot(data)
+generate_summary_plot(data){
 ggplot(filter(bing_summary, abs(bing_score) > 1)) +
     geom_bar(aes(
         y = reorder(lemma, bing_score), x = bing_score,
@@ -99,7 +92,7 @@ ggplot(filter(bing_summary, abs(bing_score) > 1)) +
         x = "Bing Score", y = ""
     ) +
     theme(legend.position = "none")
-ggsave("question_1_barplot.png")
+ggsave("question_2_barplot.png")
 
 }
 
@@ -133,10 +126,12 @@ url_df <- tibble(url = c(
   "https://www.bis.org/publ/qtrpdf/r_qt2012a.htm"
 ))
 
+exclude_words <- c("debt", "outstanding", "asset")
+
 bis_text <- url_df %>%
     mutate(text = map_chr(url, request_page, delay = delay))
 
-sentiments <- analyze_sentiments(bis_text)
+sentiments <- analyze_sentiments(bis_text, exclude_words)
 
 generate_summary_stats(sentiments)
 
