@@ -4,38 +4,13 @@ library(SnowballC)
 library(udpipe)
 library(fmsb)
 library(scales)
-
+getStemLanguages()
 
 data <- read_file("december_2020_bis.txt")
 text_df <- tibble(text = data)
 
-bis_word_tokens <- unnest_tokens(text_df, word_tokens, text, token = "words")
-bis_sentence_tokens <- unnest_tokens(text_df, word_tokens, text, token = "sentences")
-bis_ngram_tokens <- unnest_tokens(text_df, word_tokens, text, token = "ngrams", n = 3)
-
-count(bis_word_tokens, word_tokens, sort = TRUE)
-stop_words
-
-bis_no_stop_words <- bis_word_tokens %>%
-  anti_join(stop_words, by = c("word_tokens" = "word")) %>%
-  count(word_tokens, sort = TRUE)
-
-
-sentiment_nrc <- get_sentiments("nrc")
-sentiment_afinn <- get_sentiments("afinn")
-sentiment_bing <- get_sentiments("bing")
-
-for (s in c("nrc", "afinn", "bing")) {
-  bis_no_stop_words <- bis_no_stop_words %>%
-    left_join(get_sentiments(s), by = c("word_tokens" = "word")) %>%
-    plyr::rename(replace = c(sentiment = s, value = s), warn_missing = FALSE)
-}
-
-getStemLanguages()
-
 bis_udp <- udpipe(data, "english")
 bis_udp$stem <- wordStem(bis_udp$token, language = "porter")
-
 
 # I considered negating "not" but I realized that in the cases in which
 # it was used, the phrases usually didn't negate the sentiment. eg:
@@ -109,22 +84,26 @@ ggplot(filter(bing_summary, abs(bing_score) > 1)) +
     x = "Bing Score", y = ""
   ) +
   theme(legend.position = "none")
+ggsave("question_1_barplot.png")
 
-ggplot(filter(afinn_summary, abs(afinn_score) > 1)) +
-  geom_bar(aes(
-    y = reorder(lemma, afinn_score), x = afinn_score,
-    fill = factor(afinn_score > 0)
-  ),
-  stat = "identity"
-  ) +
-  labs(
-    title = "Overall Contribution to Sentiment Score by Word (Afinn)",
-    x = "Afinn Score", y = ""
-  ) +
-  theme(legend.position = "none")
+#removed a similar graph for AFINN
+#ggplot(filter(afinn_summary, abs(afinn_score) > 1)) +
+ # geom_bar(aes(
+  #  y = reorder(lemma, afinn_score), x = afinn_score,
+   # fill = factor(afinn_score > 0)
+#  ),
+ # stat = "identity"
+  #) +
+  #labs(
+   # title = "Overall Contribution to Sentiment Score by Word (Afinn)",
+    #x = "Afinn Score", y = ""
+#  ) +
+ # theme(legend.position = "none")
 
 # https://www.r-graph-gallery.com/142-basic-radar-chart.html
 data <- rbind(rep(250, 10), rep(0, 10), nrc_summary)
+
+png(file="question_1_radar_plot.png", width = 800, height = 800)
 radarchart(data,
   pfcol = rgb(0.2, 0.5, 0.5, 0.4),
   pcol = rgb(0.2, 0.5, 0.5, 0.9),
@@ -133,5 +112,6 @@ radarchart(data,
   axistype = 1,
   cglcol = "grey", cglty = 1, cglwd = 0.8, caxislabels = seq(0, 250, 62.5),
   title = "Sentiments in the December 2020 BIS (NRC)",
-  vlcex = .8
+  vlcex = 1
 )
+dev.off()
