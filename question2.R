@@ -1,3 +1,6 @@
+# Really great work!
+# 98/100
+
 library(tidyverse)
 library(tidytext)
 library(SnowballC)
@@ -148,7 +151,7 @@ bis_text <- url_df %>%
 
 sentiments <- analyze_sentiments(bis_text, exclude_words)
 write_csv(sentiments, "sentiments.csv")
-
+view(sentiments)
 # Note: unlike in the dec 2020 document, the dec 2019 document contains 
 # nots that do negate, ie Nots that are used as participles. I recognize
 # this As a problem, but wasn't able to implement a solution in time!

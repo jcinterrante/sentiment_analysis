@@ -1,3 +1,10 @@
+# 1 late token used
+
+# No relative path (or any path or directory) (-3)
+
+# Really nice job using your judgment to improve your solution (ex. removing debt, asset, and
+# outstanding) (+1)
+
 library(tidyverse)
 library(tidytext)
 library(SnowballC)
@@ -5,8 +12,8 @@ library(udpipe)
 library(fmsb)
 library(scales)
 getStemLanguages()
-
-data <- read_file("december_2020_bis.txt")
+path <- "./homework-3-jcinterrante/"
+data <- read_file(paste0(path, "december_2020_bis.txt"))
 
 bis_udp <- udpipe(data, "english")
 bis_udp$stem <- wordStem(bis_udp$token, language = "porter")
